@@ -115,6 +115,7 @@ module dtmf_up_wrapper #(
             r_y1_1 <= 16'd0;
             r_b1_2 <= 16'd0;
             r_y1_2 <= 16'd0;
+            r_len <= 32'd256;
         end else begin
             up_wack <= up_wreq_s;
         
@@ -124,6 +125,7 @@ module dtmf_up_wrapper #(
                 8'h05: r_y1_1 <= up_wdata_s[15:0];
                 8'h06: r_b1_2 <= up_wdata_s[15:0];
                 8'h07: r_y1_2 <= up_wdata_s[15:0];
+                8'h08: r_len <= up_wdata_s[15:0];
                 default: ;
             endcase
         end
@@ -145,6 +147,7 @@ module dtmf_up_wrapper #(
                 8'h05: up_rdata <= {16'd0, r_y1_1};
                 8'h06: up_rdata <= {16'd0, r_b1_2};
                 8'h07: up_rdata <= {16'd0, r_y1_2};
+                8'h08: up_rdata <= r_len;
                 default: up_rdata <= 0;
             endcase else up_rdata <= 0;
         end
@@ -167,7 +170,7 @@ module dtmf_up_wrapper #(
         .RESET(core_rst),
         .B1_COEF(r_b1_1),
         .Y1_INIT(r_y1_1),
-        .PACKET_LEN(32'd256),
+        .PACKET_LEN(r_len),
         .M_AXIS_TREADY(m_axis_tready),
         .M_AXIS_TVALID(tvalid1),
         .M_AXIS_TLAST(tlast1),
@@ -182,16 +185,19 @@ module dtmf_up_wrapper #(
         .RESET(core_rst),
         .B1_COEF(r_b1_2),
         .Y1_INIT(r_y1_2),
-        .PACKET_LEN(32'd256),
+        .PACKET_LEN(r_len),
         .M_AXIS_TREADY(m_axis_tready),
         .M_AXIS_TVALID(tvalid2),
         .M_AXIS_TLAST(tlast2),
         .M_AXIS_TDATA(tdata2)
     );
     
-    assign m_axis_tdata = tdata1 + tdata2;
+    wire signed [15:0] tdata1_shifted = $signed(tdata1) >>> 1;
+    wire signed [15:0] tdata2_shifted = $signed(tdata2) >>> 1;
+    
+    assign m_axis_tdata  = tdata1_shifted + tdata2_shifted;
     assign m_axis_tvalid = tvalid1 & tvalid2;
-    assign m_axis_tlast = tlast1 & tlast2;
+    assign m_axis_tlast  = tlast1 & tlast2;
   
 endmodule
 
